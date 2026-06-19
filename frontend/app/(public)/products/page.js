@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { addToCart } from '../../lib/cart';
+import { addToCart } from '@/lib/cart';
 import { getProducts}   from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 

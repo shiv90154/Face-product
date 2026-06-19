@@ -8,9 +8,8 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
-      // you can add other domains if needed
     ],
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
