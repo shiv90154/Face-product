@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import WishlistButton from '@/components/WishlistButton';
 import {
   Menu,
   X,
@@ -21,6 +22,9 @@ import {
   FlaskConical,
   ClipboardList,
   Shield,
+  Heart,
+  LogOut,
+  LayoutDashboard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,6 +45,7 @@ const categoryIconMap = {
   sunscreens: Sun,
   treatments: FlaskConical,
 };
+
 const defaultIcon = Tag;
 
 export default function UserHeader() {
@@ -51,8 +56,37 @@ export default function UserHeader() {
   const [servicesExpanded, setServicesExpanded] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState(false);
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
 
-  // Fetch categories
+  // ─── Auth checker ──────────────────────────────────────────
+  const checkAuth = useCallback(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      setIsLoggedIn(true);
+      try {
+        const storedUser = localStorage.getItem('user');
+        setUser(storedUser ? JSON.parse(storedUser) : { name: 'User', email: '' });
+      } catch {
+        setUser({ name: 'User', email: '' });
+      }
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+    window.addEventListener('auth-updated', checkAuth);
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      window.removeEventListener('auth-updated', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, [checkAuth]);
+
+  // ─── Categories ─────────────────────────────────────────────
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -76,7 +110,7 @@ export default function UserHeader() {
     icon: categoryIconMap[cat] || defaultIcon,
   }));
 
-  // Cart count
+  // ─── Cart count ────────────────────────────────────────────
   const updateCartCount = useCallback(() => {
     if (typeof window !== 'undefined') {
       const cart = localStorage.getItem('cart');
@@ -104,14 +138,13 @@ export default function UserHeader() {
     };
   }, [updateCartCount]);
 
-  // Scroll
+  // ─── Scroll & resize ──────────────────────────────────────
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Mobile detection
   useEffect(() => {
     const handleResize = () => setIsMobileScreen(window.innerWidth < 768);
     handleResize();
@@ -128,7 +161,7 @@ export default function UserHeader() {
     return () => document.body.classList.remove('pb-16');
   }, [isMobileScreen]);
 
-  // Sidebar overflow
+  // ─── Sidebar overflow ──────────────────────────────────────
   useEffect(() => {
     if (sidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -145,6 +178,16 @@ export default function UserHeader() {
     setSidebarOpen(false);
     setServicesExpanded(false);
   }, [pathname]);
+
+  // ─── Logout ─────────────────────────────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    setIsLoggedIn(false);
+    setUser(null);
+    window.dispatchEvent(new Event('auth-updated'));
+    window.location.href = '/';
+  };
 
   return (
     <>
@@ -185,7 +228,6 @@ export default function UserHeader() {
                   </Link>
                 );
               })}
-              {/* Admin login link */}
               <Link
                 href="/admin/login"
                 className="relative px-3 lg:px-4 py-2 text-sm lg:text-base font-medium rounded-lg transition-all duration-300 hover:bg-gray-50 hover:text-black group"
@@ -210,18 +252,46 @@ export default function UserHeader() {
                   </span>
                 )}
               </Link>
-              <Link
-                href="/login"
-                className="flex items-center gap-1.5 px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold rounded-full transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 hover:scale-105 active:scale-95"
-              >
-                <LogIn size={14} /> Login
-              </Link>
-              <Link
-                href="/register"
-                className="flex items-center gap-1.5 px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold rounded-full transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 hover:scale-105 active:scale-95"
-              >
-                <UserPlus size={14} /> Register
-              </Link>
+
+              {/* Wishlist */}
+              <WishlistButton />
+
+              {/* ─── Auth Buttons ─────────────────────────────── */}
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-black hover:bg-gray-100 rounded-lg transition"
+                  >
+                    <div className="w-7 h-7 bg-[#2874f0] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                    <span className="hidden lg:inline">Dashboard</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-red-600 transition px-2 py-1 rounded-lg hover:bg-red-50"
+                  >
+                    <LogOut size={16} />
+                    <span className="hidden lg:inline">Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="flex items-center gap-1.5 px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold rounded-full transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 hover:scale-105 active:scale-95"
+                  >
+                    <LogIn size={14} /> Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex items-center gap-1.5 px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold rounded-full transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 hover:scale-105 active:scale-95"
+                  >
+                    <UserPlus size={14} /> Register
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Toggle */}
@@ -248,7 +318,7 @@ export default function UserHeader() {
         </div>
       </header>
 
-      {/* Mobile Sidebar – same as before but with user items */}
+      {/* Mobile Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
@@ -278,6 +348,7 @@ export default function UserHeader() {
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1">
+                {/* ... same nav items as before ... */}
                 {userNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
@@ -359,7 +430,14 @@ export default function UserHeader() {
                     </Link>
                   );
                 })}
-                {/* Admin login in sidebar */}
+                <Link
+                  href="/liked"
+                  className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-50 hover:translate-x-1 transition-all"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Heart size={16} className="text-red-500" />
+                  <span>Wishlist</span>
+                </Link>
                 <Link
                   href="/admin/login"
                   className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-50 transition"
@@ -370,20 +448,34 @@ export default function UserHeader() {
                 </Link>
               </nav>
               <div className="p-3 sm:p-4 border-t space-y-2">
-                <Link
-                  href="/login"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 active:scale-98"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <LogIn size={16} /> Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 active:scale-98"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <UserPlus size={16} /> Register
-                </Link>
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setSidebarOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 active:scale-98"
+                  >
+                    <LogOut size={16} /> Logout
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 active:scale-98"
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <LogIn size={16} /> Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent border border-gray-300 text-gray-700 hover:border-gray-900 hover:text-black hover:bg-gray-50 active:scale-98"
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <UserPlus size={16} /> Register
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.aside>
           </>
@@ -416,6 +508,17 @@ export default function UserHeader() {
             </div>
             <span className="text-[10px] font-medium text-gray-600 mt-0.5">Cart</span>
           </Link>
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 hover:bg-gray-100 hover:scale-105 active:scale-95">
+              <LayoutDashboard size={20} className="text-[#2874f0]" />
+              <span className="text-[10px] font-medium text-gray-600 mt-0.5">Dashboard</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 hover:bg-gray-100 hover:scale-105 active:scale-95">
+              <LogIn size={20} className="text-gray-700" />
+              <span className="text-[10px] font-medium text-gray-600 mt-0.5">Login</span>
+            </Link>
+          )}
         </div>
       </div>
     </>

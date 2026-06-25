@@ -23,7 +23,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Lock body scroll when this page mounts
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -33,13 +32,8 @@ export default function RegisterPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Password strength checker
     if (name === "password") {
       let strength = 0;
       if (value.length >= 6) strength++;
@@ -64,7 +58,6 @@ export default function RegisterPage() {
       setError('Please enter a valid email address');
       return false;
     }
-    // Phone validation: allow optional '+' and then at least 10 digits
     const phoneRegex = /^\+?[0-9]{10,15}$/;
     if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
       setError('Please enter a valid phone number (10-15 digits, numbers only, optional +)');
@@ -95,22 +88,32 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      console.log(result);
-
       if (result.message === "User registered successfully") {
         router.push("/login");
       } else {
-        setError(result.message);
+        setError(result.message || "Registration failed");
       }
     } catch (error) {
       console.error(error);
-      setError("Something went wrong");
+      if (error.message?.toLowerCase().includes('duplicate') || 
+          error.message?.toLowerCase().includes('e11000')) {
+        setError('This phone number is already registered. Please use a different phone number.');
+      } else {
+        setError(error.message || 'Something went wrong');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBack = () => router.back();
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
   const handleHome = () => router.push('/');
 
   const getStrengthColor = () => {
@@ -124,56 +127,60 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
+      onClick={handleBack}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, type: 'spring', damping: 25 }}
-        className="w-full max-w-md mx-3 sm:mx-4 relative"
+        className="w-full max-w-sm mx-auto relative"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Home button (top-left) */}
+        {/* Home button */}
         <button
           onClick={handleHome}
-          className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
+          className="absolute -top-2 -left-2 z-10 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
           aria-label="Home"
         >
-          <Home size={20} className="text-gray-700" />
+          <Home size={18} className="text-gray-700" />
         </button>
 
-        {/* Back button (top-right) */}
+        {/* Close button */}
         <button
           onClick={handleBack}
-          className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
+          className="absolute -top-2 -right-2 z-10 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
           aria-label="Close"
         >
-          <X size={20} className="text-gray-700" />
+          <X size={18} className="text-gray-700" />
         </button>
 
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-4 sm:px-6 py-6 sm:py-8 text-center">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Create Account</h1>
-            <p className="text-gray-300 text-xs sm:text-sm mt-1">Join us and start your journey</p>
+          {/* Header – smaller */}
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-4 py-4 text-center">
+            <h1 className="text-lg sm:text-xl font-bold text-white">Create Account</h1>
+            <p className="text-gray-300 text-xs mt-0.5">Join us and start your journey</p>
           </div>
 
-          {/* Form */}
-          <div className="p-4 sm:p-6 md:p-8">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+          {/* Form – compact spacing */}
+          <div className="p-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {/* Username */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                   Username *
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <User size={14} className="text-gray-400" />
                   </div>
                   <input
                     type="text"
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-3 py-2 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all duration-200 outline-none text-gray-900 placeholder-gray-400"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-gray-900"
                     placeholder="johndoe"
                     required
                   />
@@ -182,40 +189,40 @@ export default function RegisterPage() {
 
               {/* Email */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                   Email Address *
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Mail size={14} className="text-gray-400" />
                   </div>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-3 py-2 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all duration-200 outline-none text-gray-900 placeholder-gray-400"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-gray-900"
                     placeholder="john@example.com"
                     required
                   />
                 </div>
               </div>
 
-              {/* Phone (NEW) */}
+              {/* Phone */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                   Phone Number *
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Phone size={14} className="text-gray-400" />
                   </div>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-3 py-2 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all duration-200 outline-none text-gray-900 placeholder-gray-400"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-gray-900"
                     placeholder="+1234567890"
                     required
                   />
@@ -224,40 +231,40 @@ export default function RegisterPage() {
 
               {/* Password */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                   Password *
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Lock size={14} className="text-gray-400" />
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-9 py-2 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all duration-200 outline-none text-gray-900"
+                    className="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-gray-900"
                     placeholder="••••••••"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
                 {formData.password.length > 0 && (
-                  <div className="mt-2">
-                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div className="mt-1">
+                    <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${getStrengthColor()} transition-all duration-300`}
                         style={{ width: `${(passwordStrength + 1) * 20}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Password strength: <span className="font-semibold">{getStrengthText()}</span>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      Strength: <span className="font-semibold">{getStrengthText()}</span>
                     </p>
                   </div>
                 )}
@@ -265,40 +272,40 @@ export default function RegisterPage() {
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                   Confirm Password *
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Lock size={14} className="text-gray-400" />
                   </div>
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-9 py-2 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all duration-200 outline-none text-gray-900"
+                    className="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-gray-900"
                     placeholder="••••••••"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
                 {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                  <p className="text-[10px] text-red-500 mt-0.5">Passwords do not match</p>
                 )}
                 {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password.length > 0 && (
-                  <p className="text-xs text-green-500 mt-1">Passwords match</p>
+                  <p className="text-[10px] text-green-500 mt-0.5">Passwords match</p>
                 )}
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 text-xs sm:text-sm p-2.5 sm:p-3 rounded-xl border border-red-200">
+                <div className="bg-red-50 text-red-600 text-xs p-2 rounded-lg border border-red-200">
                   {error}
                 </div>
               )}
@@ -306,30 +313,23 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full group bg-gray-900 text-white py-2.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 hover:bg-black hover:scale-[1.02] active:scale-98 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-gray-900 text-white py-2 rounded-lg font-bold text-sm transition hover:bg-black hover:scale-[1.02] active:scale-98 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <span className="flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    'Creating account...'
-                  ) : (
-                    <>
-                      Create Account
-                      <UserPlus size={16} className="transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
+                  {isLoading ? 'Creating...' : 'Create Account'}
+                  <UserPlus size={16} className="transition-transform group-hover:translate-x-1" />
                 </span>
               </button>
 
-              {/* Login link */}
-              <div className="text-center pt-2">
-                <p className="text-xs sm:text-sm text-gray-600">
+              <div className="text-center pt-1">
+                <p className="text-xs text-gray-600">
                   Already have an account?{' '}
                   <Link
                     href="/login"
-                    className="font-bold text-gray-900 hover:text-black transition-all hover:translate-x-0.5 inline-flex items-center gap-1 group"
+                    className="font-bold text-gray-900 hover:text-black transition inline-flex items-center gap-0.5"
                   >
                     Sign in
-                    <ArrowRight size={12} className="transition-transform group-hover:translate-x-1" />
+                    <ArrowRight size={12} />
                   </Link>
                 </p>
               </div>

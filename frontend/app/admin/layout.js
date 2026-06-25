@@ -13,7 +13,7 @@ export default function AdminLayout({ children }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [userCount, setUserCount] = useState(0);
 
-  // Authentication
+  // ─── Authentication ──────────────────────────────────────
   useEffect(() => {
     if (pathname === '/admin/login') {
       setIsAdmin(true);
@@ -24,17 +24,18 @@ export default function AdminLayout({ children }) {
     if (admin === 'true') {
       setIsAdmin(true);
     } else {
+      // ✅ Redirect inside useEffect, NOT during render
       router.push('/admin/login');
     }
     setLoading(false);
   }, [pathname, router]);
 
-  // Fetch user count (dummy)
+  // ─── Fetch user count (dummy) ───────────────────────────
   useEffect(() => {
-    setUserCount(0); // replace with real API
+    setUserCount(0);
   }, []);
 
-  // Scroll handler
+  // ─── Scroll handler ──────────────────────────────────────
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
@@ -55,14 +56,17 @@ export default function AdminLayout({ children }) {
     );
   }
 
-  // On login page, only children
-  if (pathname === '/admin/login') return <>{children}</>;
+  // ─── Render only children on login page ────────────────
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
+  // ─── If not admin, return null (redirect already happened) ──
   if (!isAdmin) {
-    router.push('/admin/login');
     return null;
   }
 
+  // ─── Authenticated layout ───────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <AdminHeader

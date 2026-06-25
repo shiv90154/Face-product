@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Mail, Lock, ArrowRight, X, Home } from 'lucide-react';
-import { loginUser } from "../services/auth.services";
-export default function LoginPage() {
+import { loginUser } from '../services/auth.services';
+
+// ─── Component that uses useSearchParams() ──────────────
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const redirect = searchParams.get('redirect') || '/'; // ← default to home, not dashboard
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,46 +27,55 @@ export default function LoginPage() {
     };
   }, []);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  setError("");
-  setIsLoading(true);
+    setError('');
+    setIsLoading(true);
 
-  if (!email || !password) {
-    setError("Please fill in all fields");
-    setIsLoading(false);
-    return;
-  }
-
-  try {
-    const result = await loginUser({
-      email,
-      password,
-    });
-
-    console.log("Login Response:", result);
-
-    if (result.accessToken) {
-      localStorage.setItem(
-        "accessToken",
-        result.accessToken
-      );
-
-      router.push(redirect);
-    } else {
-      setError(result.message || "Login failed");
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      setIsLoading(false);
+      return;
     }
-  } catch (error) {
-    console.error(error);
-    setError("Something went wrong");
-  } finally {
-    setIsLoading(false);
-  }
-};
 
+    try {
+      const result = await loginUser({ email, password });
+      console.log('Login Response:', result);
 
-  const handleBack = () => router.back();
+      if (result.accessToken) {
+        // ─── Store token ───────────────────────────────────────────
+        localStorage.setItem('accessToken', result.accessToken);
+
+        // ─── Store user data ──────────────────────────────────────
+        const userData = result.user || result.data || { name: 'User', email };
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        // ─── Dispatch auth event so header updates ────────────────
+        window.dispatchEvent(new Event('auth-updated'));
+
+        // ─── Redirect to the intended page (default: home) ────────
+        router.push(redirect);
+      } else {
+        setError(result.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error(error);
+      setError(error.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ─── Updated handleBack: go back or go home ────────────
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
   const handleHome = () => router.push('/');
 
   return (
@@ -75,7 +86,7 @@ const handleSubmit = async (e) => {
         transition={{ duration: 0.3, type: 'spring', damping: 25 }}
         className="w-full max-w-md mx-3 sm:mx-4 relative"
       >
-        {/* Home button (top-left) */}
+        {/* Home button */}
         <button
           onClick={handleHome}
           className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
@@ -84,7 +95,7 @@ const handleSubmit = async (e) => {
           <Home size={20} className="text-gray-700" />
         </button>
 
-        {/* Back button (top-right) */}
+        {/* Close button */}
         <button
           onClick={handleBack}
           className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 active:scale-95"
@@ -202,5 +213,14 @@ const handleSubmit = async (e) => {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+// ─── Page export with Suspense ───────────────────────────
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

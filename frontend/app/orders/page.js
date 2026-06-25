@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Calendar, Eye, ChevronLeft, X, ShoppingBag } from 'lucide-react';
@@ -34,6 +35,7 @@ const statusColors = {
 };
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,15 @@ export default function OrdersPage() {
   const formatDate = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  // ─── Back handler: go back if history exists, else home ──
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
   };
 
   // Animation variants
@@ -102,12 +113,13 @@ export default function OrdersPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/"
+          <button
+            onClick={goBack}
             className="p-2 rounded-full bg-white shadow-sm hover:shadow-md transition-all hover:scale-105 text-gray-600 hover:text-gray-900"
+            aria-label="Go back"
           >
             <ChevronLeft size={20} />
-          </Link>
+          </button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Orders</h1>
             <p className="text-sm text-gray-500 mt-1">Track and manage your orders</p>

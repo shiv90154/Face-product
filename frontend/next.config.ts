@@ -8,6 +8,13 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // ─── ADD THIS NEW PATTERN ───
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '5000',
+        pathname: '/uploads/**',  // matches your image path
+      },
     ],
   },
 };

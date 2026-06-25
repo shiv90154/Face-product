@@ -5,7 +5,9 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import userRouter from "./routes/user.routes.js";
-
+import otpRouter from "./routes/otp.routes.js";  
+import orderRouter from "./routes/order.route.js";
+import paymentRouter from "./routes/payment.routes.js";
 // ─── ES module workaround for __dirname ───
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +38,10 @@ app.use("/api/auth", authRouter);
 app.use("/api/products", productRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/categories", categoryRouter);
-
+app.use("/api/otp", otpRouter);
+app.use("/api/orders", orderRouter);
+app.use("/api/payement",paymentRouter);
+app.use("/api", paymentRouter);
 // ─── Health check ───
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "OK", message: "Server is running" });

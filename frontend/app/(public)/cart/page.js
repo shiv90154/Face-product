@@ -5,8 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Trash2, Heart, Truck, Shield, Star } from 'lucide-react';
+import { isProductLiked, toggleLikeProduct } from '@/lib/likes';
 
-// ─── Inline SVG placeholder (no external file needed) ──
 const PLACEHOLDER_SVG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' font-size='20' font-family='Arial' fill='%239ca3af' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E";
 
@@ -14,14 +14,12 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [isClient, setIsClient] = useState(false);
 
-  // ─── Load cart on client ──────────────────────────────
   useEffect(() => {
     setIsClient(true);
     const stored = localStorage.getItem('cart');
     if (stored) setCartItems(JSON.parse(stored));
   }, []);
 
-  // ─── Persist cart changes ─────────────────────────────
   useEffect(() => {
     if (isClient) {
       localStorage.setItem('cart', JSON.stringify(cartItems));
@@ -29,23 +27,35 @@ export default function CartPage() {
     }
   }, [cartItems, isClient]);
 
-  // ─── Helpers ───────────────────────────────────────────
   const updateQuantity = (id, newQty) => {
     if (newQty < 1) return;
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, quantity: newQty } : item
+        item._id === id ? { ...item, quantity: newQty } : item
       )
     );
   };
 
   const removeItem = (id) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+    setCartItems((prev) => prev.filter((item) => item._id !== id));
   };
 
-  const saveForLater = (id) => {
-    alert('Item saved for later (demo)');
-  };
+  // ─── Save for Later – add to wishlist but KEEP in cart ──
+  const saveForLater = (product) => {
+  const idToStore = product._id || product.id;
+  if (!isProductLiked(idToStore)) {
+    toggleLikeProduct(idToStore); // updates user_likes and dispatches 'likes-updated'
+
+    // ─── Store the full product object ───────
+    const wishlistProducts = JSON.parse(localStorage.getItem('wishlist_products') || '{}');
+    wishlistProducts[idToStore] = product; // store by ID
+    localStorage.setItem('wishlist_products', JSON.stringify(wishlistProducts));
+
+    console.log('✅ Added to wishlist & stored product:', product.name);
+  } else {
+    console.log('ℹ️ Already in wishlist');
+  }
+};
 
   // ─── Totals ─────────────────────────────────────────────
   const subtotal = cartItems.reduce(
@@ -61,12 +71,10 @@ export default function CartPage() {
   );
   const total = subtotal + fees - discounts;
 
-  // ─── SSR fallback ──────────────────────────────────────
   if (!isClient) {
     return <div className="min-h-screen bg-gray-50 py-10" />;
   }
 
-  // ─── Empty cart ────────────────────────────────────────
   if (cartItems.length === 0) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center px-4 py-20">
@@ -95,14 +103,14 @@ export default function CartPage() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">My Cart</h1>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* ─── LEFT – Product List ───────────────────── */}
           <div className="flex-1 space-y-4">
-            {cartItems.map((item) => {
+            {cartItems.map((item, index) => {
+              const itemKey = item._id || item.id || `cart-item-${index}`;
+
               const hasDiscount =
                 item.discountPrice && item.discountPrice < item.price;
               const finalPrice = hasDiscount ? item.discountPrice : item.price;
 
-              // ─── Image URL with fallback ──────────────
               const imageSrc =
                 item.image && item.image.startsWith('http')
                   ? item.image
@@ -110,7 +118,7 @@ export default function CartPage() {
 
               return (
                 <motion.div
-                  key={item.id}
+                  key={itemKey}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{
@@ -185,7 +193,7 @@ export default function CartPage() {
                         <div className="flex items-center gap-2 mt-2 sm:mt-0">
                           <button
                             onClick={() =>
-                              updateQuantity(item.id, item.quantity - 1)
+                              updateQuantity(item._id, item.quantity - 1)
                             }
                             className="w-8 h-8 rounded-full border border-gray-300 bg-gray-50 hover:bg-gray-200 transition flex items-center justify-center text-gray-700 font-bold"
                           >
@@ -196,7 +204,7 @@ export default function CartPage() {
                           </span>
                           <button
                             onClick={() =>
-                              updateQuantity(item.id, item.quantity + 1)
+                              updateQuantity(item._id, item.quantity + 1)
                             }
                             className="w-8 h-8 rounded-full border border-gray-300 bg-gray-50 hover:bg-gray-200 transition flex items-center justify-center text-gray-700 font-bold"
                           >
@@ -215,13 +223,13 @@ export default function CartPage() {
                         </div>
                         <div className="flex items-center gap-2 ml-auto">
                           <button
-                            onClick={() => saveForLater(item.id)}
+                            onClick={() => saveForLater(item)}
                             className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition"
                           >
                             <Heart size={14} /> Save for later
                           </button>
                           <button
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeItem(item._id)}
                             className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition"
                           >
                             <Trash2 size={14} /> Remove
