@@ -7,7 +7,7 @@ import {
   MapPin, Phone, Mail, Camera, Users, X, Play,
   Send, Clock, Globe, MessageCircle, CheckCircle, AlertCircle
 } from 'lucide-react';
-
+import Breadcrumb from '@/components/Breadcrumb';
 export default function ContactPage() {
   const sectionsRef = useRef([]);
   const heroRef = useRef(null);
@@ -124,7 +124,7 @@ export default function ContactPage() {
   ];
 
   const socialLinks = [
-    { Icon: Camera, name: 'Instagram', href: 'https://instagram.com', color: 'hover:text-pink-600', bgHover: 'hover:bg-pink-50' },
+    { Icon: Camera, name: 'Instagram', href: 'https://www.instagram.com/ankushhh_sharma_?igsh=MTlvanFyczRrNGFlMA==', color: 'hover:text-pink-600', bgHover: 'hover:bg-pink-50' },
     { Icon: Users, name: 'Facebook', href: 'https://facebook.com', color: 'hover:text-blue-700', bgHover: 'hover:bg-blue-50' },
     { Icon: X, name: 'X (Twitter)', href: 'https://twitter.com', color: 'hover:text-sky-500', bgHover: 'hover:bg-sky-50' },
     { Icon: Play, name: 'YouTube', href: 'https://youtube.com', color: 'hover:text-red-600', bgHover: 'hover:bg-red-50' }
@@ -132,6 +132,7 @@ export default function ContactPage() {
 
   return (
     <div className="bg-white min-h-screen overflow-x-hidden">
+      
       {/* Hero Section */}
       <section ref={heroRef} className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16 md:py-24 lg:py-28 overflow-hidden">
         <div className="absolute inset-0 opacity-10">

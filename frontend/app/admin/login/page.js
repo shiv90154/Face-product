@@ -13,40 +13,34 @@ export default function AdminLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    console.log('🔍 [Login] Form submitted with:', { email, password });
 
     try {
-      if (email === 'ankush2004admin@gmail.com' && password === '123456') {
-        console.log('✅ [Login] Credentials correct – setting localStorage');
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-        // 1. Set localStorage
+      const data = await res.json();
+
+      if (data.success) {
+        // If you returned a token, store it (not the real password)
         localStorage.setItem('adminLoggedIn', 'true');
-
-        // 2. Verify it was set
-        const verify = localStorage.getItem('adminLoggedIn');
-        console.log('🔍 [Login] After setting, value =', verify);
-
-        // 3. Dispatch event for header
+        // Optionally store token: localStorage.setItem('admin_token', data.token);
         window.dispatchEvent(new Event('admin-updated'));
-
-        // 4. Toast
         toast.success('Welcome Admin!');
-
-        // 5. Redirect with a small delay to ensure storage is written
         setTimeout(() => {
-          console.log('🚀 [Login] Redirecting to dashboard...');
           window.location.href = '/admin/dashboard';
         }, 150);
       } else {
-        console.warn('❌ [Login] Invalid credentials');
-        toast.error('Invalid email or password');
+        toast.error(data.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('🔥 [Login] Error:', error);
       toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  
   };
 
   return (

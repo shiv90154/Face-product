@@ -5,33 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Calendar, Eye, ChevronLeft, X, ShoppingBag } from 'lucide-react';
+import { getUserOrders, cancelOrder as apiCancel } from '../api/order'; // adjust path if needed
 
-// Centralized status color map (matches brand colors)
+// Status colors (unchanged)
 const statusColors = {
-  Confirmed: {
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
-    dot: 'bg-blue-500',
-  },
-  Shipped: {
-    bg: 'bg-indigo-50',
-    text: 'text-indigo-700',
-    border: 'border-indigo-200',
-    dot: 'bg-indigo-500',
-  },
-  Delivered: {
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    border: 'border-green-200',
-    dot: 'bg-green-500',
-  },
-  Cancelled: {
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-    border: 'border-red-200',
-    dot: 'bg-red-500',
-  },
+  Confirmed: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+  Shipped: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
+  Delivered: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+  Cancelled: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
 };
 
 export default function OrdersPage() {
@@ -40,23 +21,51 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ─── Fetch orders from backend (not localStorage) ───
   useEffect(() => {
-    const storedOrders = localStorage.getItem('orders');
-    if (storedOrders) {
-      const parsed = JSON.parse(storedOrders);
-      parsed.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
-      setOrders(parsed);
-    }
-    setLoading(false);
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        if (!userEmail) {
+          setOrders([]);
+          return;
+        }
+        const data = await getUserOrders(userEmail);
+        // Map database fields to what the component expects
+        const mapped = data.map(order => ({
+          ...order,
+          id: order._id,                     // component uses `id`
+          orderDate: order.createdAt,        // component expects `orderDate`
+        }));
+        // Sort by date descending (newest first)
+        mapped.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+        setOrders(mapped);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
   }, []);
 
-  const cancelOrder = (orderId) => {
-    if (confirm('Are you sure you want to cancel this order?')) {
-      const updatedOrders = orders.map(order =>
-        order.id === orderId ? { ...order, status: 'Cancelled' } : order
+  // ─── Cancel order using API ───
+  const cancelOrder = async (orderId) => {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    try {
+      await apiCancel(orderId);
+      // Update local state to reflect cancellation
+      setOrders(prev =>
+        prev.map(order =>
+          (order._id === orderId || order.id === orderId)
+            ? { ...order, status: 'Cancelled' }
+            : order
+        )
       );
-      localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      setOrders(updatedOrders);
+    } catch (err) {
+      alert('Failed to cancel order. Please try again.');
     }
   };
 
@@ -68,7 +77,6 @@ export default function OrdersPage() {
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  // ─── Back handler: go back if history exists, else home ──
   const goBack = () => {
     if (window.history.length > 1) {
       router.back();
@@ -77,26 +85,22 @@ export default function OrdersPage() {
     }
   };
 
-  // Animation variants
+  // Animation variants (unchanged)
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
-
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
-
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95 },
     visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
     exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
   };
 
+  // ─── Loading state ───
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen flex items-center justify-center">
@@ -108,6 +112,7 @@ export default function OrdersPage() {
     );
   }
 
+  // ─── Render ───
   return (
     <div className="bg-gray-50 min-h-screen py-8 sm:py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -164,7 +169,6 @@ export default function OrdersPage() {
                   <div className="p-4 sm:p-6">
                     <div className="flex flex-wrap justify-between items-start gap-4">
                       <div className="space-y-2 flex-1 min-w-[200px]">
-                        {/* Order ID & Date */}
                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                           <span className="font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
                             #{order.id.slice(-8)}
@@ -174,8 +178,6 @@ export default function OrdersPage() {
                             {formatDate(order.orderDate)}
                           </span>
                         </div>
-
-                        {/* Total & Status */}
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="text-lg font-bold text-gray-900">
                             ₹{order.total?.toFixed(2)}
@@ -188,14 +190,10 @@ export default function OrdersPage() {
                           </span>
                           <span className="text-xs text-gray-400">{order.paymentMethod}</span>
                         </div>
-
-                        {/* Items count */}
                         <p className="text-xs text-gray-400">
                           {order.items?.length || 0} item{order.items?.length !== 1 ? 's' : ''}
                         </p>
                       </div>
-
-                      {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
                         <button
                           onClick={() => viewDetails(order)}
@@ -221,7 +219,7 @@ export default function OrdersPage() {
           </motion.div>
         )}
 
-        {/* Order Details Modal */}
+        {/* Order Details Modal (unchanged, but now uses order.shipping.address directly) */}
         <AnimatePresence>
           {selectedOrder && (
             <div
@@ -236,7 +234,6 @@ export default function OrdersPage() {
                 className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Header */}
                 <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
                   <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
                   <button
@@ -246,10 +243,7 @@ export default function OrdersPage() {
                     <X size={20} className="text-gray-500" />
                   </button>
                 </div>
-
-                {/* Content */}
                 <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                  {/* Order info */}
                   <div className="grid sm:grid-cols-2 gap-4 pb-4 border-b border-gray-100">
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</p>
@@ -274,8 +268,6 @@ export default function OrdersPage() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Shipping address */}
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-2">Shipping Address</h3>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
@@ -285,8 +277,6 @@ export default function OrdersPage() {
                       <p className="text-gray-600">{selectedOrder.shipping?.address}</p>
                     </div>
                   </div>
-
-                  {/* Items */}
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-2">Items</h3>
                     <div className="space-y-3">

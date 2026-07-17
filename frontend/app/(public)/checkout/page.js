@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import GooglePayButton from '@google-pay/button-react';
+import { createOrder } from '../../api/order';   // adjust path
 
 // ---------- MERCHANT UPI DETAILS ----------
 const MERCHANT_UPI_ID = "9816722750@axl";
@@ -374,45 +375,38 @@ export default function CheckoutPage() {
   // ---------- Save order to DATABASE ----------
   const saveOrderToHistory = async (paymentMethod) => {
     try {
-      const payload = {
-        userEmail: form.email,
-        shipping: {
-          fullName: form.fullName,
-          email: form.email,
-          phone: form.phone,
-          houseNo: form.houseNo,
-          street: form.street,
-          city: form.city,
-          state: form.state,
-          country: form.country,
-          pincode: form.pincode,
-        },
-        items: JSON.parse(localStorage.getItem('cart') || '[]'),
-        total: total,
-        paymentMethod: paymentMethod,
-      };
+  const payload = {
+    userEmail: form.email,
+    shipping: {
+      fullName: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      houseNo: form.houseNo,
+      street: form.street,
+      city: form.city,
+      state: form.state,
+      country: form.country,
+      pincode: form.pincode,
+    },
+    items: cartItems.map(item => ({
+      id: item.id || null,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image || null,
+    })),
+    total,
+    paymentMethod,   // already mapped to "Credit/Debit Card" etc.
+  };
 
-      const res = await fetch(`${API_BASE}/api/orders/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.removeItem('cart');
-        window.dispatchEvent(new Event('cart-updated'));
-        setOrderPlaced(true);
-        return true;
-      } else {
-        alert(data.error || 'Order submission failed. Please try again.');
-        return false;
-      }
-    } catch (error) {
-      console.error('Order save error:', error);
-      alert('Network error. Please check your connection.');
-      return false;
-    }
+  await createOrder(payload);
+  localStorage.setItem('userEmail', form.email);
+  localStorage.removeItem('cart');
+  window.dispatchEvent(new Event('cart-updated'));
+  setOrderPlaced(true);
+} catch (error) {
+  alert(error.message);
+}
   };
 
   // ---------- Google Pay success ----------
