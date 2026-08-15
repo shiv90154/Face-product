@@ -1,14 +1,116 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, createContext, useContext, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
-export default function HomePage() {
+
+// ─── Cart Context ────────────────────────────────────────
+const CartContext = createContext();
+
+export function CartProvider({ children }) {
+  const [cartItems, setCartItems] = useState([]);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('cart');
+      if (stored) setCartItems(JSON.parse(stored));
+    } catch (e) {
+      console.error('Failed to load cart', e);
+    }
+  }, []);
+
+  // Persist cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  const addToCart = useCallback((product, quantity = 1) => {
+    setCartItems(prev => {
+      const existing = prev.find(item => item._id === product._id);
+      if (existing) {
+        return prev.map(item =>
+          item._id === product._id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [...prev, { ...product, quantity }];
+    });
+  }, []);
+
+  const removeFromCart = useCallback((productId) => {
+    setCartItems(prev => prev.filter(item => item._id !== productId));
+  }, []);
+
+  const updateQuantity = useCallback((productId, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCartItems(prev =>
+      prev.map(item => (item._id === productId ? { ...item, quantity } : item))
+    );
+  }, [removeFromCart]);
+
+  const clearCart = useCallback(() => setCartItems([]), []);
+
+  const cartTotal = cartItems.reduce(
+    (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
+    0
+  );
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <CartContext.Provider
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        cartTotal,
+        cartCount,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+}
+
+// ─── Toast Component ─────────────────────────────────────
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl animate-slide-up">
+      {message}
+    </div>
+  );
+}
+
+// ─── Home Page Content (uses useCart) ────────────────────
+function HomePageContent() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
   const sectionsRef = useRef([]);
+
+  // Access cart context inside the provider
+  const { addToCart } = useCart();
 
   // ─── Fetch products ──────────────────────────────────────
   useEffect(() => {
@@ -74,6 +176,12 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
+  // ─── Add to cart handler with toast ──────────────────
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    setToast(`${product.name} added to cart!`);
+  };
+
   // ─── Loading state ────────────────────────────────────
   if (loading) {
     return (
@@ -101,8 +209,7 @@ export default function HomePage() {
   // ─── Main content ─────────────────────────────────────
   return (
     <>
-   
-
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       <div className="bg-white min-h-screen overflow-x-hidden">
         {/* ─── HERO ────────────────────────────────────────── */}
         <section className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20 md:py-28 overflow-hidden">
@@ -239,10 +346,10 @@ export default function HomePage() {
                   return (
                     <div
                       key={product._id}
-                      className="group bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                      className="group bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col"
                       style={{ transitionDelay: `${idx * 100}ms` }}
                     >
-                      <Link href={`/product/${product.slug}`}>
+                      <Link href={`/product/${product.slug}`} className="block">
                         <div className="relative h-40 sm:h-56 md:h-64 overflow-hidden">
                           {imageUrl && imageUrl !== '' ? (
                             <Image
@@ -261,7 +368,46 @@ export default function HomePage() {
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
                         </div>
                       </Link>
-                      {/* You may want to add product title/price here as well, but the original code omitted it */}
+
+                      {/* ── Product Details ── */}
+                      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+                        <Link href={`/product/${product.slug}`} className="block">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-2 hover:text-[#1a237e] transition-colors">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-lg sm:text-xl font-bold text-gray-900">
+                            ₹{finalPrice}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-xs sm:text-sm text-gray-500 line-through">
+                              ₹{product.price}
+                            </span>
+                          )}
+                        </div>
+                        {/* Add to Cart Button */}
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          className="mt-3 w-full py-2 px-4 bg-[#1a237e] text-white text-sm sm:text-base font-medium rounded-lg hover:bg-[#283593] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"
+                            />
+                          </svg>
+                          Add to Cart
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -327,5 +473,14 @@ export default function HomePage() {
         </section>
       </div>
     </>
+  );
+}
+
+// ─── Default Export: wraps content with CartProvider ────
+export default function HomePage() {
+  return (
+    <CartProvider>
+      <HomePageContent />
+    </CartProvider>
   );
 }
