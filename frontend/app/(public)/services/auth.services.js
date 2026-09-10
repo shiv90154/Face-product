@@ -118,3 +118,4 @@ export async function updateProfile(updates) {
   });
   return handleResponse(res);
 }
+

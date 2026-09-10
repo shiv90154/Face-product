@@ -27,3 +27,4 @@ export function getLikedProducts(allProducts) {
   const ids = getLikedProductIds();
   return allProducts.filter(p => ids.includes(p._id));
 }
+

@@ -124,3 +124,4 @@ export function recommendProducts(products, answers) {
 
   return suitable.slice(0, 4); // top 4 recommendations
 }
+

@@ -1,5 +1,5 @@
 // lib/api.js
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // ─── Generic fetch wrapper ──────────────────────────────────
 async function fetchApi(endpoint, options = {}) {
@@ -119,3 +119,4 @@ export async function logout() {
 // ─── Export the base URL as both named and default ────────
 export const API_URL = API_BASE;
 export default API_URL;
+

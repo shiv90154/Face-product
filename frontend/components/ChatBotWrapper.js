@@ -11,3 +11,4 @@ const ChatBot = dynamic(() => import("./ChatBot"), {
 export default function ChatBotWrapper() {
   return <ChatBot />;
 }
+

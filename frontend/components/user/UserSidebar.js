@@ -82,3 +82,4 @@ export default function UserSidebar({ user, onClose, onLogout }) {
     </aside>
   );
 }
+

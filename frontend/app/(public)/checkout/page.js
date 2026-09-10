@@ -11,7 +11,7 @@ const MERCHANT_UPI_ID = "9816722750@axl";
 const MERCHANT_NAME = "Face Product";
 
 // ---------- Backend API base ----------
-const API_BASE = 'http://localhost:5000';   // adjust to your backend port
+const API_BASE = '';   // adjust to your backend port
 
 // ---------- Searchable Select (fully implemented) ----------
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled = false, loading = false }) => {
@@ -804,3 +804,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:5000';
+const BASE = '';
 
 export const createOrder = async (orderData) => {
   const res = await fetch(`${BASE}/api/orders/create`, {
@@ -26,3 +26,4 @@ export const cancelOrder = async (orderId) => {
   if (!res.ok) throw new Error(data.error || 'Cancel failed');
   return data;
 };
+

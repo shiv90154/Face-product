@@ -317,3 +317,4 @@ function StatCard({ icon, label, value, bg, border, onClick }) {
     </div>
   );
 }
+

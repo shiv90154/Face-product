@@ -52,3 +52,4 @@ export default function LikeButton({ productId, product = null }) {
     </button>
   );
 }
+

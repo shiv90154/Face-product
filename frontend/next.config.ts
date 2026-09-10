@@ -8,14 +8,22 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
-      // ─── ADD THIS NEW PATTERN ───
       {
         protocol: 'http',
-        hostname: 'localhost',
+        hostname: '**',
         port: '5000',
-        pathname: '/uploads/**',  // matches your image path
+        pathname: '/uploads/**',
       },
     ],
+  },
+  
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:5000/api/:path*',
+      },
+    ]
   },
 };
 

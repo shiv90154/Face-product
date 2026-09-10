@@ -90,7 +90,7 @@ export default function UserHeader() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
         const res = await fetch(`${API_BASE}/categories`);
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
@@ -524,3 +524,4 @@ export default function UserHeader() {
     </>
   );
 }
+

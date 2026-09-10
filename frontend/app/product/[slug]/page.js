@@ -9,7 +9,7 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/footer';
 import { Minus, Plus, Star, ShoppingCart, ChevronRight } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export default function ProductDetailPage() {
   const params = useParams();

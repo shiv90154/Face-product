@@ -175,7 +175,7 @@ export default function EditProductPage() {
         const formData = new FormData();
         imageFiles.forEach((file) => formData.append('images', file));
         const uploadRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/upload`,
+          `${process.env.NEXT_PUBLIC_API_URL || '/api'}/upload`,
           { method: 'POST', body: formData }
         );
         const uploadData = await uploadRes.json();

@@ -76,3 +76,4 @@ export const removeItem = (id) => {
   saveCart(filtered);
   return filtered;
 };
+
